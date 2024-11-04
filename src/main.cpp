@@ -8,6 +8,7 @@
 
 #include "SnmpPtrinter.h"
 #include "SnmpException.h"
+#include "ServiceRunner.h"
 #include "Service.h"
 
 #include <snmp_pp/snmp_pp.h>
@@ -45,8 +46,6 @@ protected:
 
     virtual void onUpdate() override 
     {
-        //iter++;
-        ///if (iter > 5) { stop(); }
         syslog(LOG_ALERT, "sussy baka");
     }
 
@@ -55,9 +54,9 @@ protected:
         syslog(LOG_INFO, "shutdown");
     }
 
-    virtual void onRestart() override 
+    virtual void onReload() override 
     {
-        syslog(LOG_INFO, "restart");
+        syslog(LOG_INFO, "reload");
     }
 
 private:
@@ -66,7 +65,7 @@ private:
 
 int main()
 {
-    DummyService().run();
+    ServiceRunner::getInstance().run<DummyService>();
 
     /*DefaultLog::log()->set_profile("off");
 

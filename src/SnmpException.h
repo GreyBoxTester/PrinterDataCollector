@@ -1,3 +1,4 @@
+#pragma once
 #include <snmp_pp/uxsnmp.h>
 
 #define SNMP_CHECK(expr) do { \

@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>
 #include <snmp_pp/uxsnmp.h>
 #include <snmp_pp/target.h>

@@ -17,9 +17,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #======= target =======
 add_executable(PrinterDataCollector)
 
-file(GLOB SRC ${PROJECT_SOURCE_DIR}/*.cpp)
+file(GLOB SRC ${PROJECT_SOURCE_DIR}/src/*.cpp)
 target_sources(PrinterDataCollector PRIVATE ${SRC})
 
 target_link_libraries(PrinterDataCollector
     PRIVATE snmp++
 )
+
+#====== systemd =======
+configure_file(systemd/daemon.service.in systemd/${PROJECT_NAME}.service)
