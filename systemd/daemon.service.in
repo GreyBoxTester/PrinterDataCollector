@@ -1,0 +1,15 @@
+# Properties docs: https://www.freedesktop.org/software/systemd/man/systemd.service.html
+[Unit]
+Description=@PROJECT_DESCRIPTION@
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/@PROJECT_NAME@
+ExecReload=/bin/kill -s SIGHUP $MAINPID
+ExecStop=/bin/kill -s SIGTERM $MAINPID
+User=root
+SyslogIdentifier=@PROJECT_NAME@
+
+[Install]
+WantedBy=multi-user.target
