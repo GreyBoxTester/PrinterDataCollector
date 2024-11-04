@@ -4,85 +4,14 @@
 #include <vector>
 #include <variant>
 #include <memory>
+#include <syslog.h>
+
+#include "SnmpPtrinter.h"
+#include "SnmpException.h"
+#include "Service.h"
 
 #include <snmp_pp/snmp_pp.h>
-
-
-#define SNMP_CHECK(expr) do { \
-    int res = (expr); \
-    if (res) { throw SnmpException(res); } \
-} while (false) \
-
-
-#define OID_PRINTER_MIB_ROOT "1.3.6.1.2.1.43"
-
-/*#define OID_DEVICE_DESCRIPTION "1.3.6.1.2.1.1.1.0"
-
-#define OID_PRINTER_SERIAL_NUMBER "1.3.6.1.2.1.43.5.1.1.17.1"
-#define OID_LIFE_COUNT "1.3.6.1.2.1.43.10.2.1.4.1.1"
-
-#define OID_SEQ_CONSUMABLES_NAME "1.3.6.1.2.1.43.11.1.1.6.1"
-#define OID_SEQ_CONSUMABLES_VALUE_MAX "1.3.6.1.2.1.43.11.1.1.8.1"
-#define OID_SEQ_CONSUMABLES_VALUE "1.3.6.1.2.1.43.11.1.1.9.1"
-
-#define OID_SEQ_ALERTS_SEVERITY_LEVEL "1.3.6.1.2.1.43.18.1.1.2.1"
-#define OID_SEQ_ALERTS_CODE "1.3.6.1.2.1.43.18.1.1.7.1"
-#define OID_SEQ_ALERTS_DESCRIPTION "1.3.6.1.2.1.43.18.1.1.8.1"
-#define OID_SEQ_ALERTS_TIME "1.3.6.1.2.1.43.18.1.1.9.1"*/
-
-
 using namespace Snmp_pp;
-
-
-class SnmpException : public std::exception
-{
-public:
-    SnmpException(int errorCode) : errorCode_(errorCode) {}
-    int getErrorCode() const noexcept { return errorCode_; }
-    virtual const char* what() const noexcept override { return Snmp::error_msg(errorCode_); }
-private:
-    int errorCode_ = 0;
-};
-
-
-bool isInSubtree(const Oid& oid1, const Oid& oid2)
-{
-    if (oid1.len() > oid2.len()) { return false; }
-    for (unsigned int i = 0; i < oid1.len(); i++)
-    {
-        if (oid1[i] != oid2[i]) { return false; }
-    }
-    return true;
-}
-
-std::string getAsString(Snmp& session, SnmpTarget& target, int securityLevel, const Oid& oid)
-{
-    Vb vb(oid);
-    Pdu pdu(&vb, 1);
-    pdu.set_security_level(securityLevel);
-
-    SNMP_CHECK(session.get(pdu, target));
-    pdu.get_vb(vb, 0);
-    return vb.get_printable_value();
-}
-
-std::vector<Vb> walkSubtree(Snmp& session, SnmpTarget& target, int securityLevel, const Oid& root)
-{
-    std::vector<Vb> res;
-    Vb vb(root);
-    Pdu pdu(&vb, 1);
-    pdu.set_security_level(securityLevel);
-
-    while (true)
-    {
-        SNMP_CHECK(session.get_next(pdu, target));
-        pdu.get_vb(vb, 0);
-        if (!isInSubtree(root, vb.get_oid())) { break; }
-        res.push_back(vb);
-    }
-
-    return res;
-}
 
 v3MP initV3MP(const char* bootCounterFile)
 {
@@ -100,49 +29,46 @@ v3MP initV3MP(const char* bootCounterFile)
     return v3mp;
 }
 
-/*void printPrinterInfo(Snmp& session, SnmpTarget& target)
+using namespace std::chrono_literals;
+
+class DummyService : public Service
 {
-    std::cout << "Printer info:\n";
-    std::cout << "  description: " << getAsString(session, target, OID_DEVICE_DESCRIPTION) << '\n';
-    std::cout << "  serial number: " << getAsString(session, target, OID_PRINTER_SERIAL_NUMBER) << '\n';
-
+public:
+    DummyService()
+        : Service(1s)
+    {}
+protected:
+    virtual void onStartup() override 
     {
-        auto names = walkSubtree(session, target, OID_SEQ_CONSUMABLES_NAME);
-        auto values = walkSubtree(session, target, OID_SEQ_CONSUMABLES_VALUE);
-        auto valuesMax = walkSubtree(session, target, OID_SEQ_CONSUMABLES_VALUE_MAX);
-
-        std::cout << "cartriges:\n";
-        for (size_t i = 0; i < names.size(); i++)
-        {
-            std::cout << "  " << names[i].get_printable_value() << " : " << values[i].get_printable_value() << " out of " << valuesMax[i].get_printable_value() << '\n';
-        }
+        syslog(LOG_INFO, "startup");
     }
 
-    std::cout << "life count(pages or other unit): " << getAsString(session, target, OID_LIFE_COUNT) << '\n';
-
+    virtual void onUpdate() override 
     {
-        auto levels = walkSubtree(session, target, OID_SEQ_ALERTS_SEVERITY_LEVEL);
-        auto codes = walkSubtree(session, target, OID_SEQ_ALERTS_CODE);
-        auto descriptions = walkSubtree(session, target, OID_SEQ_ALERTS_DESCRIPTION);
-        auto times = walkSubtree(session, target, OID_SEQ_ALERTS_TIME);
-
-        std::cout << "alerts:\n";
-        for (size_t i = 0; i < levels.size(); i++)
-        {
-            std::cout << "  alert " << i << ":\n";
-            std::cout << "    severity: " << levels[i].get_printable_value() << '\n';
-            std::cout << "    code: " << codes[i].get_printable_value() << '\n';
-            std::cout << "    description: " << descriptions[i].get_printable_value() << '\n';
-            std::cout << "    time: " << times[i].get_printable_value() << '\n';
-        }
+        //iter++;
+        ///if (iter > 5) { stop(); }
+        syslog(LOG_ALERT, "sussy baka");
     }
 
-    std::cout.flush();
-}*/
+    virtual void onShutdown() override 
+    {
+        syslog(LOG_INFO, "shutdown");
+    }
+
+    virtual void onRestart() override 
+    {
+        syslog(LOG_INFO, "restart");
+    }
+
+private:
+    int iter = 0;
+};
 
 int main()
 {
-    DefaultLog::log()->set_profile("off");
+    DummyService().run();
+
+    /*DefaultLog::log()->set_profile("off");
 
     Snmp::socket_startup();
 
@@ -208,14 +134,8 @@ int main()
             target = std::make_unique<UTarget>(UdpAddress(ip.c_str()), username.c_str(), SNMP_SECURITY_MODEL_USM);
         }
 
-        //printPrinterInfo(session, *target);
-
-        auto printerInfo = walkSubtree(session, *target, securityLevel, OID_PRINTER_MIB_ROOT);
-        for (auto& vb : printerInfo) 
-        { 
-            std::cout << vb.get_printable_oid() << ' ' << vb.get_printable_value() << std::endl;
-        }
- 
+        SnmpPrinter printer(std::move(target));
+        std::cout << printer.getFullInfo(session).toJson();
     }
     catch (const SnmpException& e)
     {
@@ -231,5 +151,5 @@ int main()
     }
 
     Snmp::socket_cleanup();
-    return 0;
+    return 0;*/
 }
