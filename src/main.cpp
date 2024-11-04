@@ -6,7 +6,7 @@
 #include <memory>
 #include <syslog.h>
 
-#include "SnmpPtrinter.h"
+#include "SnmpPrinter.h"
 #include "SnmpException.h"
 #include "ServiceRunner.h"
 #include "Service.h"

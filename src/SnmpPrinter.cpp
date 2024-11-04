@@ -1,4 +1,4 @@
-#include "SnmpPtrinter.h"
+#include "SnmpPrinter.h"
 #include <snmp_pp/vb.h>
 #include <snmp_pp/pdu.h>
 #include "SnmpException.h"
